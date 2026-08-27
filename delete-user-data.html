@@ -96,17 +96,6 @@
     .status.visible { display: block; }
     .status.ok { background: #ecfdf5; color: #065f46; }
     .status.err { background: #fef2f2; color: var(--danger); }
-    details {
-      margin-top: 1.5rem;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-    code, kbd {
-      font-size: 0.88em;
-      background: var(--bg);
-      padding: 0.1em 0.35em;
-      border-radius: 4px;
-    }
   </style>
 </head>
 <body>
@@ -146,20 +135,6 @@
         <button type="submit" id="submit-btn">Send confirmation email</button>
       </form>
       <div id="status" class="status" role="status" aria-live="polite"></div>
-
-      <details>
-        <summary>Operator setup (do not publish secrets)</summary>
-        <p>
-          Replace <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> in the script below with your project values
-          (the anon key already ships in the app — never put the service-role key in this file). Then:
-        </p>
-        <ol>
-          <li>Run <code>supabase/migrations/013_account_deletion_request.sql</code>, <code>014_delete_account_auth_admin.sql</code>, and <code>016_account_deletion_by_email.sql</code> in the SQL Editor.</li>
-          <li>Deploy Edge Functions <code>request-account-deletion</code> and <code>confirm-account-deletion</code> (<code>verify_jwt = false</code> on confirm so the email link works).</li>
-          <li>Set function secrets <code>RESEND_API_KEY</code> and <code>DELETION_FROM_EMAIL</code> (for example <code>Life Metric &lt;noreply@your-domain&gt;</code>).</li>
-          <li>Host this HTML over HTTPS (GitHub Pages or your site). Opening it as a local <code>file://</code> page may be blocked by the browser.</li>
-        </ol>
-      </details>
     </article>
   </main>
   <script>
