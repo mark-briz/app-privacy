@@ -54,7 +54,8 @@
       font-weight: 600;
       margin-bottom: 0.4rem;
     }
-    input[type="text"] {
+    input[type="text"],
+    input[type="email"] {
       width: 100%;
       padding: 0.75rem 0.85rem;
       border: 1px solid var(--border);
@@ -63,7 +64,8 @@
       color: var(--ink);
       background: var(--bg);
     }
-    input[type="text"]:focus {
+    input[type="text"]:focus,
+    input[type="email"]:focus {
       outline: 2px solid var(--brand);
       outline-offset: 1px;
       background: #fff;
@@ -111,13 +113,13 @@
   <main>
     <article class="card">
       <h1>Delete your Life Metric data</h1>
-      <p class="meta">Request permanent deletion of the cloud account tied to your user ID.</p>
+      <p class="meta">Request permanent deletion of the cloud account tied to your login email.</p>
 
       <h2>How this works</h2>
       <ol>
-        <li>Enter the <strong>user ID</strong> shown on <strong>Profile</strong> in the Life Metric app (a UUID such as <code>xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code>).</li>
+        <li>Enter the <strong>email address</strong> you use to sign in to Life Metric.</li>
         <li>Select <strong>Send confirmation email</strong>.</li>
-        <li>If that user ID is found, we email the address on the account. The message includes a link to finish deletion.</li>
+        <li>If that email belongs to an account, we send a confirmation link to it.</li>
         <li>Open the link within <strong>5 minutes</strong>. After that the token expires and you must submit this form again.</li>
       </ol>
       <p>
@@ -126,20 +128,20 @@
       </p>
 
       <form id="delete-form" novalidate>
-        <label for="user-id">User ID</label>
+        <label for="email">Login email</label>
         <input
-          id="user-id"
-          name="user_id"
-          type="text"
-          inputmode="text"
-          autocomplete="off"
+          id="email"
+          name="email"
+          type="email"
+          inputmode="email"
+          autocomplete="email"
           spellcheck="false"
           required
-          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          aria-describedby="user-id-hint"
+          placeholder="you@email.com"
+          aria-describedby="email-hint"
         />
-        <p id="user-id-hint" class="meta" style="margin: 0.4rem 0 0;">
-          Copy this from Profile in the app. We never ask for your password on this page.
+        <p id="email-hint" class="meta" style="margin: 0.4rem 0 0;">
+          Use the same email you sign in with. We never ask for your password on this page.
         </p>
         <button type="submit" id="submit-btn">Send confirmation email</button>
       </form>
@@ -152,7 +154,7 @@
           (the anon key already ships in the app — never put the service-role key in this file). Then:
         </p>
         <ol>
-          <li>Run <code>supabase/migrations/013_account_deletion_request.sql</code> in the SQL Editor.</li>
+          <li>Run <code>supabase/migrations/013_account_deletion_request.sql</code>, <code>014_delete_account_auth_admin.sql</code>, and <code>016_account_deletion_by_email.sql</code> in the SQL Editor.</li>
           <li>Deploy Edge Functions <code>request-account-deletion</code> and <code>confirm-account-deletion</code> (<code>verify_jwt = false</code> on confirm so the email link works).</li>
           <li>Set function secrets <code>RESEND_API_KEY</code> and <code>DELETION_FROM_EMAIL</code> (for example <code>Life Metric &lt;noreply@your-domain&gt;</code>).</li>
           <li>Host this HTML over HTTPS (GitHub Pages or your site). Opening it as a local <code>file://</code> page may be blocked by the browser.</li>
@@ -165,9 +167,9 @@
     const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
     const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
 
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const form = document.getElementById('delete-form');
-    const input = document.getElementById('user-id');
+    const input = document.getElementById('email');
     const button = document.getElementById('submit-btn');
     const status = document.getElementById('status');
 
@@ -187,15 +189,15 @@
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const userId = (input.value || '').trim();
+      const email = (input.value || '').trim().toLowerCase();
 
       if (!configured()) {
         showStatus('err', 'This page is not connected to Life Metric yet. Use Profile → Delete account in the app, or contact the privacy address listed in the privacy policy.');
         return;
       }
 
-      if (!UUID_RE.test(userId)) {
-        showStatus('err', 'Enter a valid user ID. It looks like xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx and is shown on Profile in the app.');
+      if (!EMAIL_RE.test(email)) {
+        showStatus('err', 'Enter a valid email address.');
         return;
       }
 
@@ -210,7 +212,7 @@
             Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
             apikey: SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ user_id: userId }),
+          body: JSON.stringify({ email: email }),
         });
 
         const payload = await response.json().catch(function () { return {}; });
@@ -223,7 +225,7 @@
         showStatus(
           'ok',
           payload.message ||
-            'If that user ID is in our records, we sent a confirmation email to the address on the account. The link expires in 5 minutes.'
+            'If that email is in our records, we sent a confirmation link. The link expires in 5 minutes.'
         );
       } catch (err) {
         showStatus('err', 'We could not reach the server. Check your connection and try again.');
