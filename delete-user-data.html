@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Delete your data — Life Metric</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #64748b;
+      --brand: #0d9488;
+      --brand-hover: #0f766e;
+      --danger: #b91c1c;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--ink);
+      background: linear-gradient(180deg, #d1fae5 0%, #fef3c7 45%, #ffedd5 100%);
+      min-height: 100vh;
+    }
+    main {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem 1.5rem;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    }
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.75rem;
+      letter-spacing: -0.02em;
+    }
+    .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.25rem; }
+    h2 {
+      margin-top: 1.5rem;
+      font-size: 1.1rem;
+      color: var(--brand);
+    }
+    p, li { color: var(--ink); }
+    a { color: var(--brand); }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    input[type="text"]:focus {
+      outline: 2px solid var(--brand);
+      outline-offset: 1px;
+      background: #fff;
+    }
+    button[type="submit"] {
+      margin-top: 1rem;
+      width: 100%;
+      padding: 0.8rem 1rem;
+      border: none;
+      border-radius: 10px;
+      background: var(--brand);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button[type="submit"]:hover { background: var(--brand-hover); }
+    button[type="submit"]:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+    .status {
+      margin-top: 1rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 10px;
+      display: none;
+    }
+    .status.visible { display: block; }
+    .status.ok { background: #ecfdf5; color: #065f46; }
+    .status.err { background: #fef2f2; color: var(--danger); }
+    details {
+      margin-top: 1.5rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    code, kbd {
+      font-size: 0.88em;
+      background: var(--bg);
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <article class="card">
+      <h1>Delete your Life Metric data</h1>
+      <p class="meta">Request permanent deletion of the cloud account tied to your user ID.</p>
+
+      <h2>How this works</h2>
+      <ol>
+        <li>Enter the <strong>user ID</strong> shown on <strong>Profile</strong> in the Life Metric app (a UUID such as <code>xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code>).</li>
+        <li>Select <strong>Send confirmation email</strong>.</li>
+        <li>If that user ID is found, we email the address on the account. The message includes a link to finish deletion.</li>
+        <li>Open the link within <strong>5 minutes</strong>. After that the token expires and you must submit this form again.</li>
+      </ol>
+      <p>
+        Deletion is permanent: workouts, weight and blood-pressure readings, plans, profile, and the sign-in account are removed from our servers.
+        If you are still signed in on a phone, use <strong>Profile → Delete account</strong> instead — that also clears data stored on the device.
+      </p>
+
+      <form id="delete-form" novalidate>
+        <label for="user-id">User ID</label>
+        <input
+          id="user-id"
+          name="user_id"
+          type="text"
+          inputmode="text"
+          autocomplete="off"
+          spellcheck="false"
+          required
+          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          aria-describedby="user-id-hint"
+        />
+        <p id="user-id-hint" class="meta" style="margin: 0.4rem 0 0;">
+          Copy this from Profile in the app. We never ask for your password on this page.
+        </p>
+        <button type="submit" id="submit-btn">Send confirmation email</button>
+      </form>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+
+      <details>
+        <summary>Operator setup (do not publish secrets)</summary>
+        <p>
+          Replace <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> in the script below with your project values
+          (the anon key already ships in the app — never put the service-role key in this file). Then:
+        </p>
+        <ol>
+          <li>Run <code>supabase/migrations/013_account_deletion_request.sql</code> in the SQL Editor.</li>
+          <li>Deploy Edge Functions <code>request-account-deletion</code> and <code>confirm-account-deletion</code> (<code>verify_jwt = false</code> on confirm so the email link works).</li>
+          <li>Set function secrets <code>RESEND_API_KEY</code> and <code>DELETION_FROM_EMAIL</code> (for example <code>Life Metric &lt;noreply@your-domain&gt;</code>).</li>
+          <li>Host this HTML over HTTPS (GitHub Pages or your site). Opening it as a local <code>file://</code> page may be blocked by the browser.</li>
+        </ol>
+      </details>
+    </article>
+  </main>
+  <script>
+    // Replace these with your project values. Never put the service-role key here.
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const form = document.getElementById('delete-form');
+    const input = document.getElementById('user-id');
+    const button = document.getElementById('submit-btn');
+    const status = document.getElementById('status');
+
+    function showStatus(kind, message) {
+      status.className = 'status visible ' + kind;
+      status.textContent = message;
+    }
+
+    function configured() {
+      return (
+        SUPABASE_URL &&
+        !SUPABASE_URL.includes('YOUR_PROJECT') &&
+        SUPABASE_ANON_KEY &&
+        SUPABASE_ANON_KEY !== 'YOUR_ANON_KEY'
+      );
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const userId = (input.value || '').trim();
+
+      if (!configured()) {
+        showStatus('err', 'This page is not connected to Life Metric yet. Use Profile → Delete account in the app, or contact the privacy address listed in the privacy policy.');
+        return;
+      }
+
+      if (!UUID_RE.test(userId)) {
+        showStatus('err', 'Enter a valid user ID. It looks like xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx and is shown on Profile in the app.');
+        return;
+      }
+
+      button.disabled = true;
+      showStatus('ok', 'Sending request…');
+
+      try {
+        const response = await fetch(SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/request-account-deletion', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+            apikey: SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ user_id: userId }),
+        });
+
+        const payload = await response.json().catch(function () { return {}; });
+
+        if (!response.ok) {
+          showStatus('err', payload.error || 'We could not start the deletion request. Try again later or use Profile → Delete account in the app.');
+          return;
+        }
+
+        showStatus(
+          'ok',
+          payload.message ||
+            'If that user ID is in our records, we sent a confirmation email to the address on the account. The link expires in 5 minutes.'
+        );
+      } catch (err) {
+        showStatus('err', 'We could not reach the server. Check your connection and try again.');
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
